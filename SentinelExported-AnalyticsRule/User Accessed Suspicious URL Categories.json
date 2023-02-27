@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/6e16dc82-ea01-41d5-aa55-6390a418421d')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/6e16dc82-ea01-41d5-aa55-6390a418421d')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-09-01-preview",
+      "properties": {
+        "queryFrequency": "PT1H",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "severity": "Medium",
+        "query": "\nSymantecProxySG\n| mv-expand cs_categories\n| where cs_categories has_any (\"Suspicious\",\"phishing\", \"hacking\")\n| summarize StartTime = min(TimeGenerated), EndTime = max(TimeGenerated), count() by sc_filter_result, cs_userdn, c_ip, cs_host, Computer,  tostring(cs_categories)\n| extend timestamp = StartTime, AccountCustomEntity = cs_userdn, IPCustomEntity = c_ip, HostCustomEntity = Computer\n",
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": false,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5M",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": null,
+            "groupByCustomDetails": null
+          }
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "AccountCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "HostCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "IPCustomEntity"
+              }
+            ]
+          }
+        ],
+        "tactics": [
+          "DefenseEvasion"
+        ],
+        "techniques": null,
+        "displayName": "User Accessed Suspicious URL Categories",
+        "enabled": false,
+        "description": "Creates an incident in the event the requested URL accessed by the user has been identified as Suspicious, Phishing, or Hacking.",
+        "alertRuleTemplateName": "fb0f4a93-d8ad-4b54-9931-85bdb7550f90"
+      }
+    }
+  ]
+}
