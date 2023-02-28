@@ -1,0 +1,68 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/3c746716-20a6-46bd-98fd-d5c9d0aa1553')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/3c746716-20a6-46bd-98fd-d5c9d0aa1553')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-09-01-preview",
+      "properties": {
+        "queryFrequency": "P1D",
+        "queryPeriod": "P1D",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "severity": "Low",
+        "query": "AuditLogs\n| where Category =~ \"RoleManagement\"\n| where ActivityDisplayName =~ 'Add member to role (permanent)'\n| extend AccountCustomEntity = tostring(TargetResources[0].userPrincipalName), IPCustomEntity = tostring(parse_json(tostring(InitiatedBy.user)).ipAddress)\n",
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": false,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5M",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": null,
+            "groupByCustomDetails": null
+          }
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "AccountCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "IPCustomEntity"
+              }
+            ]
+          }
+        ],
+        "tactics": [
+          "PrivilegeEscalation"
+        ],
+        "techniques": null,
+        "displayName": "Privileged Role Assigned Outside PIM",
+        "enabled": false,
+        "description": "Identifies a privileged role being assigned to a user outside of PIM\nRef : https://docs.microsoft.com/azure/active-directory/fundamentals/security-operations-privileged-accounts#things-to-monitor-1",
+        "alertRuleTemplateName": "269435e3-1db8-4423-9dfc-9bf59997da1c"
+      }
+    }
+  ]
+}
