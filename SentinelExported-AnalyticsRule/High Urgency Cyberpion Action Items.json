@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/af5d8d85-ac5f-4ef7-bf10-7b43986ec91d')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/af5d8d85-ac5f-4ef7-bf10-7b43986ec91d')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-09-01-preview",
+      "properties": {
+        "queryFrequency": "P1D",
+        "queryPeriod": "P14D",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "severity": "High",
+        "query": "let timeframe = 14d;\nlet time_generated_bucket = 1h;\nlet min_urgency = 9;\nlet maxTimeGeneratedBucket = toscalar(\n   CyberpionActionItems_CL\n   | where TimeGenerated > ago(timeframe)\n   | summarize max(bin(TimeGenerated, time_generated_bucket))\n   );\nCyberpionActionItems_CL\n | where TimeGenerated > ago(timeframe) and is_open_b == true\n | where bin(TimeGenerated, time_generated_bucket) == maxTimeGeneratedBucket\n | where urgency_d >= min_urgency\n | extend timestamp = opening_datetime_t\n | extend DNSCustomEntity = host_s\n",
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": false,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5M",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": null,
+            "groupByCustomDetails": null
+          }
+        },
+        "tactics": [
+          "InitialAccess"
+        ],
+        "techniques": null,
+        "displayName": "High Urgency Cyberpion Action Items",
+        "enabled": false,
+        "description": "This query creates an alert for active Cyberpion Action Items with high urgency (9-10).\n Urgency can be altered using the \"min_urgency\" variable in the query.",
+        "alertRuleTemplateName": "8e0403b1-07f8-4865-b2e9-74d1e83200a4"
+      }
+    }
+  ]
+}
