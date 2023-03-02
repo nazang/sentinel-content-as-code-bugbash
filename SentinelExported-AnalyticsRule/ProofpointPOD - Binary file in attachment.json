@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/8ed981a2-337b-4542-a371-3968ac93f923')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/8ed981a2-337b-4542-a371-3968ac93f923')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-09-01-preview",
+      "properties": {
+        "queryFrequency": "PT10M",
+        "queryPeriod": "PT10M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "severity": "Medium",
+        "query": "let lbtime = 10m;\nProofpointPOD\n| where TimeGenerated > ago(lbtime)\n| where EventType == 'message'\n| where NetworkDirection == 'inbound'\n| where FilterDisposition !in ('reject', 'discard')\n| extend attachedMimeType = todynamic(MsgParts)[0]['detectedMime']\n| where attachedMimeType == 'application/zip'\n| project SrcUserUpn, DstUserUpn\n| extend AccountCustomEntity = DstUserUpn\n",
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": false,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5M",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": null,
+            "groupByCustomDetails": null
+          }
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "AccountCustomEntity"
+              }
+            ]
+          }
+        ],
+        "tactics": [
+          "InitialAccess"
+        ],
+        "techniques": null,
+        "displayName": "ProofpointPOD - Binary file in attachment",
+        "enabled": false,
+        "description": "Detects when email recieved with binary file as attachment.",
+        "alertRuleTemplateName": "eb68b129-5f17-4f56-bf6d-dde48d5e615a"
+      }
+    }
+  ]
+}
