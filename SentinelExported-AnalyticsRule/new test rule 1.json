@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/c48bc19c-dba4-4da3-b215-c9086150d26f')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/c48bc19c-dba4-4da3-b215-c9086150d26f')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-09-01-preview",
+      "properties": {
+        "queryFrequency": "P1D",
+        "queryPeriod": "P1D",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "eventGroupingSettings": {
+          "aggregationKind": "SingleAlert"
+        },
+        "severity": "Medium",
+        "query": "CommonSecurityLog",
+        "suppressionDuration": "PT5H",
+        "suppressionEnabled": false,
+        "incidentConfiguration": {
+          "createIncident": false,
+          "groupingConfiguration": {
+            "enabled": false,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "tactics": [],
+        "techniques": [],
+        "displayName": "new test rule 1",
+        "enabled": true,
+        "description": "",
+        "alertRuleTemplateName": null
+      }
+    }
+  ]
+}
