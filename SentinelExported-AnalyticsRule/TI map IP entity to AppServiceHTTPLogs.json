@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspace": {
+      "type": "String"
+    }
+  },
+  "resources": [
+    {
+      "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/2c3d7a74-362a-4a6e-836a-279bc1fd8813')]",
+      "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/2c3d7a74-362a-4a6e-836a-279bc1fd8813')]",
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "kind": "Scheduled",
+      "apiVersion": "2022-09-01-preview",
+      "properties": {
+        "queryFrequency": "PT1H",
+        "queryPeriod": "P14D",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "severity": "Medium",
+        "query": "\nlet dt_lookBack = 1h;\nlet ioc_lookBack = 14d;\nThreatIntelligenceIndicator\n| where TimeGenerated >= ago(ioc_lookBack) and ExpirationDateTime > now()\n| summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by IndicatorId\n| where Active == true\n// Picking up only IOC's that contain the entities we want\n| where isnotempty(NetworkIP) or isnotempty(EmailSourceIpAddress) or isnotempty(NetworkDestinationIP) or isnotempty(NetworkSourceIP)\n// As there is potentially more than 1 indicator type for matching IP, taking NetworkIP first, then others if that is empty.\n// Taking the first non-empty value based on potential IOC match availability\n| extend TI_ipEntity = iff(isnotempty(NetworkIP), NetworkIP, NetworkDestinationIP)\n| extend TI_ipEntity = iff(isempty(TI_ipEntity) and isnotempty(NetworkSourceIP), NetworkSourceIP, TI_ipEntity)\n| extend TI_ipEntity = iff(isempty(TI_ipEntity) and isnotempty(EmailSourceIpAddress), EmailSourceIpAddress, TI_ipEntity)\n// using innerunique to keep perf fast and result set low, we only need one match to indicate potential malicious activity that needs to be investigated\n| join kind=innerunique (\n  AppServiceHTTPLogs | where TimeGenerated >= ago(dt_lookBack)\n  | where isnotempty(CIp)\n  | extend WebApp = split(_ResourceId, '/')[8]\n  // renaming time column so it is clear the log this came from\n  | extend AppService_TimeGenerated = TimeGenerated\n)\non $left.TI_ipEntity == $right.CIp\n| where AppService_TimeGenerated < ExpirationDateTime\n| summarize AppService_TimeGenerated = arg_max(AppService_TimeGenerated, *) by IndicatorId, CIp\n| project AppService_TimeGenerated, Description, ActivityGroupNames, IndicatorId, ThreatType, Url, ExpirationDateTime, ConfidenceScore, TI_ipEntity, CsUsername, \nWebApp = split(_ResourceId, '/')[8], CIp, CsHost, NetworkIP, NetworkDestinationIP, NetworkSourceIP, EmailSourceIpAddress, _ResourceId\n| extend timestamp = AppService_TimeGenerated, AccountCustomEntity = CsUsername, IPCustomEntity = CIp, URLCustomEntity = CsHost\n",
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": false,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5M",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": null,
+            "groupByCustomDetails": null
+          }
+        },
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "AccountCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "IPCustomEntity"
+              }
+            ]
+          },
+          {
+            "entityType": "URL",
+            "fieldMappings": [
+              {
+                "identifier": "Url",
+                "columnName": "URLCustomEntity"
+              }
+            ]
+          }
+        ],
+        "tactics": [
+          "Impact"
+        ],
+        "techniques": null,
+        "displayName": "TI map IP entity to AppServiceHTTPLogs",
+        "enabled": false,
+        "description": "Identifies a match in AppServiceHTTPLogs from any IP IOC from TI",
+        "alertRuleTemplateName": "f9949656-473f-4503-bf43-a9d9890f7d08"
+      }
+    }
+  ]
+}
